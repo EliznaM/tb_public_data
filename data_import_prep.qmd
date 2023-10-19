@@ -86,7 +86,7 @@ toc()
 ## Parameters
 
 ```{r}
-access_nrs <- c("GSE89403", "GSE84076", "GSE107991")
+access_nrs <- c("GSE89403", "GSE84076", "GSE107991", "GSE192483")
 sm_files <- paste0(access_nrs, "_series_matrix.txt")
 path_sm_files <- "sm_files"
 
@@ -164,28 +164,32 @@ terms_experi <- tibble(x = c("experimentData|PMIDs|pmid_nr|yyyy")) %>%
   separate(x, into = c("dataset", "term", "sql_name", "sql_table"), sep = "\\|")
 
 View(pheno)
+pheno %>% print(n = Inf)
+
+pheno %>% 
+  filter(geo_set == "GSE192483") %>% 
+  print(n = Inf)
+
+pheno %>% 
+  filter(str_detect(key, "molecule")) %>% 
+  distinct(value) %>% 
+  print(n = Inf)
 
 terms_pheno <- tibble(x = c(
            "phenoData|clinical_information|clin_char_type|TBdata_clin",
-           "phenoData|contact_email|xxxxx|TBdata_meta_char",
-           "phenoData|contact_name|corr_author|TBdata_meta_char",
+           "phenoData|contact_email|corr_author_email|TBdata_meta_char",
+           "phenoData|contact_name|corr_author_name|TBdata_meta_char",
            "phenoData|disease_state|xxxxx|TBdata_clin_char",
-           "phenoData|extract_protocol|xxxxxx|TBdata_meta_char",
            "phenoData|group|infection_disease_stage|TBdata_clin_char",
            "phenoData|instrument_model|sequencing_platform|TBdata_clin_char",
-           "phenoData|library_strategy|xxxxx|TBdata_meta_char",
-           "phenoData|mgit|xxxxxx|TBdata_clin_char",
-           "phenoData|molecule|sample_type|TBdata_meta_char",
-           "phenoData|organism|host_species|TBdata_clin_char",
-         
+           "phenoData|mgit|mgit|TBdata_clin_char",
+           "phenoData|organism|organism|TBdata_clin_char",
            "phenoData|sample_code|xxxxx|TBdata_source",
            "phenoData|source_name|acc_source|TBdata_source",
            "phenoData|subject|xxxxx|TB_meta_char",
            "phenoData|time:|timepoints|TBdata_meta_char",
-           "phenoData|timetonegativity|xxxxxx|TB_clin_char",
-           "phenoData|tissue|organ|TBdata_clin_char",
-           "phenoData|treatmentresult|xxxxxx|TBdata_clin_char",
-           "phenoData|xpert|tb_diagnostic_test|TBdata_clin_char")) %>% 
+           "phenoData|tissue|tissue|TBdata_clin_char",
+           "phenoData|xpert|expert|TBdata_clin_char")) %>% 
   separate(x, into = c("dataset", "term", "sql_name", "sql_table"), sep = "\\|")
  
 tic()     
