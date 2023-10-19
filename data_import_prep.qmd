@@ -185,11 +185,10 @@ terms_pheno <- tibble(x = c(
            "phenoData|mgit|mgit|TBdata_clin_char",
            "phenoData|organism|organism|TBdata_clin_char",
            "phenoData|sample_code|xxxxx|TBdata_source",
-           "phenoData|source_name|acc_source|TBdata_source",
            "phenoData|subject|xxxxx|TB_meta_char",
            "phenoData|time:|timepoints|TBdata_meta_char",
            "phenoData|tissue|tissue|TBdata_clin_char",
-           "phenoData|xpert|expert|TBdata_clin_char")) %>% 
+           "phenoData|xpert|xpert|TBdata_clin_char")) %>% 
   separate(x, into = c("dataset", "term", "sql_name", "sql_table"), sep = "\\|")
  
 tic()     
