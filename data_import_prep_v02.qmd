@@ -1,0 +1,220 @@
+---
+title: "Title"
+author: "Elizna Maasdorp"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+format: 
+  html:
+    embed-resources: true
+    page-layout: full
+    fig-width: 24
+    fig-height: 18
+editor: source
+editor_options: 
+  chunk_output_type: console
+execute: 
+  echo: true
+  warning: false
+  error: false
+---
+
+# Overview
+
+```{r}
+#| echo: false
+
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(GEOquery)
+library(furrr)
+library(tictoc)
+library(conflicted)
+
+conflicts_prefer(dplyr::select(),
+                 dplyr::filter(),
+                 dplyr::rename(),
+                 Biobase::combine()
+                 )
+
+# colours
+
+# themeCols <- tibble(hex3 = c("#47e5bc", "#F54E56", "#FFA90B"),
+#                     hex7 = c("#47e5bc", "#F54E56", "#FFA90B",
+#                              "#6AECF0", "#293241", "#716F66", "#790600" ),
+#                     hex4 = c("#dd1155", "#FAD711", "#0CEE84",  "#5F0030"),
+#                     hex5 = c("#084c61", "#db504a", "#F8CB15", "#72BAB4", 
+#                              "#30454E"))
+
+
+# ggplot theme
+
+chapTheme <- theme_classic() + 
+  theme(text = element_text(color = "grey30",
+                            size = 18),
+        line = element_line(color = "grey30", linewidth = 0.25),
+        rect = element_rect(color = "grey30", linewidth = 0.25),
+        panel.background = element_rect(colour = "grey70", linewidth = 2),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        strip.background = element_rect(colour = "grey70",
+                                        linewidth = 0.25),
+        strip.text = element_text(colour = "grey30"))
+
+theme_set(chapTheme)
+
+
+```
+
+## Set up parallel computing
+
+```{r}
+parallelly::availableCores()  # how many cores available
+
+# (default nr of workers is parallelly::availableCores())
+wrkrs <- 10
+plan(multisession, workers = wrkrs)  # multicore not available from RStudio or Windows
+
+# check if working
+tic()
+nothingness <- future_map(rep(2, wrkrs), ~Sys.sleep(.x))
+toc()
+# should take around 2 seconds, or at least much less than 2*wrkrs
+
+```
+
+
+## Parameters
+
+```{r}
+tmp <- read_delim("geo_acc_list_manual_filter.txt")
+access_nrs <- tmp$GEO
+# access_nrs <- c("GSE89403", "GSE84076", "GSE107991")
+
+sm_files <- paste0(access_nrs, "_series_matrix.txt")
+# path_sm_files <- "sm_files"
+path_sm_files <- "/home/emaasdorp/public_tb_data"
+
+# create dir
+
+if(sum(grepl("sm_files", list.dirs(recursive = FALSE))) == 0){
+  dir.create("sm_files")
+}
+
+```
+
+Get files
+
+```{r}
+
+# furrr functions
+tic()
+gse_list <- future_map(access_nrs, 
+                       ~ getGEO(.x, destdir = path_sm_files, AnnotGPL = FALSE))
+
+toc()
+
+# errors
+
+sm_fldr_list <- list.files("sm_files")
+sm_fldr_list <- gsub("_series_matrix.txt.gz", "", sm_fldr_list[str_detect(sm_fldr_list, "GSE")])
+sm_fldr_list <- gsub("-GPL[0-9]+", "", sm_fldr_list)
+sort(sm_fldr_list)
+
+err_acc_nrs <- access_nrs[!access_nrs %in% sm_fldr_list]
+
+
+# non-parallel code----------
+# gse_list <- list()
+# for(i in 1:length(access_nrs)){
+# gse_list[[i]] <- getGEO(access_nrs[i], destdir = path_sm_files, AnnotGPL = TRUE)
+# 
+# }
+
+```
+
+
+```{r}
+# gse <- gse_list[[1]]
+# gse2 <- gse_list[[2]]
+# 
+# # ---------------------
+# str(gse$GSE89403_series_matrix.txt.gz, max.level = 3)
+# str(gse$GSE89403_series_matrix.txt.gz@experimentData)
+# str(gse$GSE89403_series_matrix.txt.gz@phenoData)
+
+```
+
+Use phenoData.  Remove redundant columns and make long set. 
+
+```{r}
+# pData(gse_list[[1]][[1]])
+names(gse_list[[1]][[1]])
+
+pheno <- future_map2(gse_list, access_nrs,
+                         ~pData(.x[[1]]) %>%
+                           as_tibble() %>% 
+                      mutate(geo_set = .y) %>% 
+        pivot_longer(-c(geo_accession, geo_set), names_to = "key", values_to = "value") %>% 
+        filter(!str_detect(key, "data_processing") &
+           !str_detect(value, "data_processing"))) %>% 
+  bind_rows()
+
+
+
+
+# pheno %>% 
+#   filter(str_detect(value, ":")) %>% 
+#   distinct(key = value) %>% 
+#   bind_rows(pheno %>% 
+#               distinct(key)) %>% 
+#   filter(!grepl("^SRA", key)) %>% 
+#   arrange(key) %>% 
+#   mutate(across(key, ~str_replace_all(.x, ":[a-zA-Z0-9 \\/\\.]+", ""))) %>% 
+#   distinct() %>% 
+#   print(n = Inf)
+#  
+
+terms_experi <- tibble(x = c("experimentData|PMIDs|pmid_nr|yyyy")) %>% 
+  separate(x, into = c("dataset", "term", "sql_name", "sql_table"), sep = "\\|")
+
+terms_pheno <- tibble(x = c(
+           "phenoData|clinical information|xxxxx|TBdata_clin",
+           "phenoData|contact_email|contact_email|TBdata_meta_char",
+           "phenoData|contact_name|corr_author|yyyy",
+           "phenoData|disease state|disease_state|yyyy",
+           "phenoData|extract_protocol|xxxxxx|yyyy",
+           "phenoData|group|xxxxxx|yyyyy",
+           "phenoData|instrument_model|sequencing_platform|yyyyy",
+           "phenoData|library_strategy|xxxxx|yyyyy",
+           "phenoData|mgit|xxxxxx|yyyyy",
+           "phenoData|molecule|xxxxxx|yyyyy",
+           "phenoData|organism|xxxxxx|yyyyy",
+         
+           "phenoData|sample_code|xxxxxx|yyyyy",
+           "phenoData|source_name|sample_type|yyyyy",
+           "phenoData|subject|xxxxx|yyyyy",
+           "phenoData|time:|xxxxxx|yyyyy",
+           "phenoData|timetonegativity|xxxxxx|yyyyy",
+           "phenoData|tissue|xxxxx|yyyyy",
+           "phenoData|treatmentresult|xxxxxx|yyyyy",
+           "phenoData|xpert|xxxxxx|yyyyy")) %>% 
+  separate(x, into = c("dataset", "term", "sql_name", "sql_table"), sep = "\\|")
+ 
+tic()     
+info_list <- future_map(terms$term,
+                        ~pheno %>% 
+  filter(str_detect(key, .x) | 
+           str_detect(value, .x)) %>% 
+  distinct())
+toc() # 5 secs
+
+names(info_list) <- terms$term
+
+info_list
+
+
+
+
+```
+
+

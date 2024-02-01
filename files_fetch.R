@@ -37,7 +37,6 @@ gse_list <- future_map(access_nrs,
 # gse_list <- future_map(access_nrs, 
 #                        ~ GEOquery::getGEO(.x, destdir = path_sm_files, AnnotGPL = FALSE))
 
-
 # errors
 
 sm_fldr_list <- list.files("sm_files")
@@ -54,7 +53,7 @@ saveRDS(err_acc_nrs, "err_acc_nrs.rds")
   # sort out lists in list
 x <- which(purrr::map_dbl(gse_list, ~length(.x)) != 1)
 if(length(x != 0)){
-gse_list <- unlist(ll, recursive = FALSE)
+gse_list <- unlist(gse_list, recursive = FALSE)
 }
 
 
