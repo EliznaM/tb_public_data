@@ -60,13 +60,13 @@ gse_list <- unlist(gse_list, recursive = FALSE)
 # pData(gse_list[[1]][[1]])
 
 pheno <- future_map2(gse_list, access_nrs,
-                     ~pData(.x[[1]]) %>%
-                       as_tibble() %>% 
-                       mutate(geo_set = .y) %>% 
-                       pivot_longer(-c(geo_accession, geo_set), names_to = "key", values_to = "value") %>% 
-                       filter(!str_detect(key, "data_processing") &
-                                !str_detect(value, "data_processing"))) %>% 
-  bind_rows()
+                     ~BioBase::pData(.x[[1]]) |>
+                       tibble::as_tibble() |> 
+                       dplyr::mutate(geo_set = .y) %>% 
+                       tidyr::pivot_longer(-c(geo_accession, geo_set), names_to = "key", values_to = "value") |> 
+                       dplyr::filter(!str_detect(key, "data_processing") &
+                                !str_detect(value, "data_processing"))) |>
+  dplyr::bind_rows()
 
 saveRDS(pheno, "pheno.rds")
 
