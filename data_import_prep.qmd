@@ -86,9 +86,13 @@ toc()
 ## Parameters
 
 ```{r}
-access_nrs <- c("GSE89403", "GSE84076", "GSE107991")
+tmp <- read_delim("geo_acc_list_manual_filter.txt")
+access_nrs <- tmp$GEO
+# access_nrs <- c("GSE89403", "GSE84076", "GSE107991")
+
 sm_files <- paste0(access_nrs, "_series_matrix.txt")
-path_sm_files <- "sm_files"
+# path_sm_files <- "sm_files"
+path_sm_files <- "/home/emaasdorp/public_tb_data"
 
 # create dir
 
@@ -103,9 +107,20 @@ Get files
 ```{r}
 
 # furrr functions
-
+tic()
 gse_list <- future_map(access_nrs, 
-                       ~ getGEO(.x, destdir = path_sm_files, AnnotGPL = TRUE))
+                       ~ getGEO(.x, destdir = path_sm_files, AnnotGPL = FALSE))
+
+toc()
+
+# errors
+
+sm_fldr_list <- list.files("sm_files")
+sm_fldr_list <- gsub("_series_matrix.txt.gz", "", sm_fldr_list[str_detect(sm_fldr_list, "GSE")])
+sm_fldr_list <- gsub("-GPL[0-9]+", "", sm_fldr_list)
+sort(sm_fldr_list)
+
+err_acc_nrs <- access_nrs[!access_nrs %in% sm_fldr_list]
 
 
 # non-parallel code----------
@@ -116,7 +131,6 @@ gse_list <- future_map(access_nrs,
 # }
 
 ```
-
 
 
 ```{r}
