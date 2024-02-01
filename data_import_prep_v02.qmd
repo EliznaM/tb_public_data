@@ -65,115 +65,25 @@ theme_set(chapTheme)
 
 ```
 
-## Set up parallel computing
-
 ```{r}
-parallelly::availableCores()  # how many cores available
+# from hemera
+pheno <- read_rds("pheno.rds")
 
-# (default nr of workers is parallelly::availableCores())
-wrkrs <- 10
-plan(multisession, workers = wrkrs)  # multicore not available from RStudio or Windows
+sort(unique(pheno$key))
 
-# check if working
-tic()
-nothingness <- future_map(rep(2, wrkrs), ~Sys.sleep(.x))
-toc()
-# should take around 2 seconds, or at least much less than 2*wrkrs
+pheno %>% 
+  count(geo_accession, geo_set)
 
-```
-
-
-## Parameters
-
-```{r}
-tmp <- read_delim("geo_acc_list_manual_filter.txt")
-access_nrs <- tmp$GEO
-# access_nrs <- c("GSE89403", "GSE84076", "GSE107991")
-
-sm_files <- paste0(access_nrs, "_series_matrix.txt")
-# path_sm_files <- "sm_files"
-path_sm_files <- "/home/emaasdorp/public_tb_data"
-
-# create dir
-
-if(sum(grepl("sm_files", list.dirs(recursive = FALSE))) == 0){
-  dir.create("sm_files")
-}
-
-```
-
-Get files
-
-```{r}
-
-# furrr functions
-tic()
-gse_list <- future_map(access_nrs, 
-                       ~ getGEO(.x, destdir = path_sm_files, AnnotGPL = FALSE))
-
-toc()
-
-# errors
-
-sm_fldr_list <- list.files("sm_files")
-sm_fldr_list <- gsub("_series_matrix.txt.gz", "", sm_fldr_list[str_detect(sm_fldr_list, "GSE")])
-sm_fldr_list <- gsub("-GPL[0-9]+", "", sm_fldr_list)
-sort(sm_fldr_list)
-
-err_acc_nrs <- access_nrs[!access_nrs %in% sm_fldr_list]
-
-
-# non-parallel code----------
-# gse_list <- list()
-# for(i in 1:length(access_nrs)){
-# gse_list[[i]] <- getGEO(access_nrs[i], destdir = path_sm_files, AnnotGPL = TRUE)
-# 
-# }
+pheno %>% 
+  distinct(geo_set, key) %>% 
+  count(key) %>% 
+  arrange(key) %>% 
+  print(n = Inf)
 
 ```
 
 
 ```{r}
-# gse <- gse_list[[1]]
-# gse2 <- gse_list[[2]]
-# 
-# # ---------------------
-# str(gse$GSE89403_series_matrix.txt.gz, max.level = 3)
-# str(gse$GSE89403_series_matrix.txt.gz@experimentData)
-# str(gse$GSE89403_series_matrix.txt.gz@phenoData)
-
-```
-
-Use phenoData.  Remove redundant columns and make long set. 
-
-```{r}
-# pData(gse_list[[1]][[1]])
-names(gse_list[[1]][[1]])
-
-pheno <- future_map2(gse_list, access_nrs,
-                         ~pData(.x[[1]]) %>%
-                           as_tibble() %>% 
-                      mutate(geo_set = .y) %>% 
-        pivot_longer(-c(geo_accession, geo_set), names_to = "key", values_to = "value") %>% 
-        filter(!str_detect(key, "data_processing") &
-           !str_detect(value, "data_processing"))) %>% 
-  bind_rows()
-
-
-
-
-# pheno %>% 
-#   filter(str_detect(value, ":")) %>% 
-#   distinct(key = value) %>% 
-#   bind_rows(pheno %>% 
-#               distinct(key)) %>% 
-#   filter(!grepl("^SRA", key)) %>% 
-#   arrange(key) %>% 
-#   mutate(across(key, ~str_replace_all(.x, ":[a-zA-Z0-9 \\/\\.]+", ""))) %>% 
-#   distinct() %>% 
-#   print(n = Inf)
-#  
-
 terms_experi <- tibble(x = c("experimentData|PMIDs|pmid_nr|yyyy")) %>% 
   separate(x, into = c("dataset", "term", "sql_name", "sql_table"), sep = "\\|")
 
