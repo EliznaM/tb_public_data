@@ -77,10 +77,221 @@ pheno %>%
 pheno %>% 
   distinct(geo_set, key) %>% 
   count(key) %>% 
-  arrange(key) %>% 
+  arrange(desc(n)) %>% 
   print(n = Inf)
 
 ```
+
+Sort out "characteristics_*"  
+
+```{r}
+
+tmp <- pheno %>% 
+  filter(str_detect(key, "character")) %>% 
+  distinct(value) %>% 
+  separate(value, into = c("key2", "value2"), sep = ":", remove = FALSE) %>% 
+  distinct(key2) %>% 
+  arrange(key2) %>% 
+  print(n = Inf)
+
+
+
+```
+
+Leave out for now, then add afterwards, only the ones NOT in the list
+
+
+# Key
+
+Manually put together the terms that seem to be the same thing. Make list.
+
+```{r}
+x <- pheno %>% 
+  distinct(geo_set, key) %>% 
+  count(key) %>% 
+  arrange(key) %>% 
+  print(n = Inf) %>% 
+  pull(key)
+
+ll <- list()
+# age
+ll$age <- x[str_detect(x, "age") & !str_detect(x, "agent") & !str_detect(x, "stage")]
+
+# art
+ll$art <- x[str_detect(x, "retroviral")]
+
+
+# bronchs
+
+ll$bronch <- x[str_detect(x, "bal")]
+
+# bcg
+
+ll$bcg <- x[str_detect(x, "bcg")]
+
+
+# case or control
+ll$case_control <- x[str_detect(x, "case or")]
+
+# cell type
+
+ll$cell_type <- x[str_detect(x, "cell") & !str_detect(x, "flowcell") &
+    !str_detect(x, "number of")]
+
+
+# clinical_dx
+
+ll$clin_dx <- c(x[str_detect(x, "clinical")],
+                x[str_detect(x, "diagnos") & !str_detect(x, "previous")],
+                x[str_detect(x, "disease") & !str_detect(x, "duration")],
+                x[str_detect(x, "distinct stages of tb")],
+                x[str_detect(x, "eptborptb")],
+                x[str_detect(x, "etiology")],
+                x[str_detect(x, "healthy")],
+                x[str_detect(x, "illness")],
+                x[str_detect(x, "phenotype")],
+                x[str_detect(x, "tb status")],
+                x[str_detect(x, "tb-status")],
+                
+                x[str_detect(x, "latent tb")],
+                x[str_detect(x, "infection") & !str_detect(x, "time")],
+                x[str_detect(x, "exposure") & !str_detect(x, "time.from")],
+                x[str_detect(x, "condition") &
+                                    !str_detect(x, "incubation") &
+    !str_detect(x, "stimulation")])
+
+
+# culture
+
+ll$culture <- c(x[str_detect(x, "culture")], x[str_detect(x, "mgit")])
+
+# time / days
+
+ll$timepoint <- c(x[str_detect(x, "days")], 
+                  x[str_detect(x, "time") & !str_detect(x, "negativity")])
+
+
+# sex
+
+ll$sex <- c(x[str_detect(x, "gender")], x[str_detect(x, "sex")])
+
+# geographical_region
+ll$geographical_region <- c(x[str_detect(x,"birth_place")], x[str_detect(x, "geographical")],
+                            x[str_detect(x, "recruiting")])
+
+
+pheno %>% 
+  filter(str_detect(key, "type")) %>% 
+  distinct(key, value) %>% 
+  print(n = Inf)
+
+x
+
+# hiv
+
+ll$hiv <- x[str_detect(x, "hiv")]
+
+# igra
+ll$igra <- c(x[str_detect(x, "igra")], x[str_detect(x, "qft")], x[str_detect(x, "quanti")])
+
+
+# instrument
+
+ll$instrument <- x[str_detect(x, "instrument")]
+
+# molecule
+
+ll$molecule <- x[str_detect(x, "molecule")]
+
+# organism
+
+ll$organism <- x[str_detect(x, "organism")]
+
+
+# prev tb
+
+ll$prev_tb <- x[str_detect(x, "previous")]
+
+# sample type
+
+ll$sample_type <- c(x[str_detect(x, "sample") & str_detect(x, "type")], 
+  x[str_detect(x, "source_name")],
+    x[str_detect(x, "tissue")]) 
+
+
+
+# smear
+ll$smear <- x[str_detect(x, "smear")]
+
+ # tspot
+ll$tspot <- x[str_detect(x, "tspot")]
+ 
+ 
+ # tst
+ 
+ll$tst <- c(x[str_detect(x, "tst")], x[str_detect(x, "tuberculin skin test")]) 
+ 
+ 
+ # xpert
+ 
+ll$xpert <- x[str_detect(x, "xpert")]
+ 
+```
+
+
+```{r}
+pheno
+length(ll)
+
+tibble(key = ll[[22]]) %>% 
+  left_join(pheno) %>% 
+  select(geo_set, key, value) %>% 
+  distinct() %>% 
+  print(n = Inf)
+  
+# add column to ll with the variable name from database
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ```{r}
